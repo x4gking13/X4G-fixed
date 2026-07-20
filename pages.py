@@ -1909,13 +1909,6 @@ html,body{{min-height:100%;background:var(--bg);font-family:var(--serif);color:v
 .cfg-vless{{background:rgba(0,0,0,.22);border:1px solid var(--card-b);border-radius:10px;padding:11px 13px;font-size:9.8px;font-family:ui-monospace,monospace;color:var(--accent2);word-break:break-all;line-height:1.7;margin-top:9px;max-height:90px;overflow-y:auto}}
 [data-theme="light"] .cfg-vless{{background:rgba(46,99,214,.05)}}
 .cfg-actions{{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}}
-.app-open-wrap{{position:relative;display:inline-flex}}
-.app-menu{{display:none;position:fixed;min-width:210px;background:var(--card);border:1px solid var(--card-b);border-radius:13px;box-shadow:var(--shadow);padding:6px;z-index:9999}}
-.app-open-wrap.open .app-menu{{display:block}}
-.app-menu-item{{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;font-size:12px;font-weight:600;color:var(--t1);cursor:pointer;transition:.12s}}
-.app-menu-item:hover{{background:var(--accent-d);color:var(--accent2)}}
-.app-menu-item i{{font-size:15px;color:var(--accent2);flex-shrink:0}}
-.app-menu-hint{{font-size:9.5px;color:var(--t3);padding:6px 11px 2px;line-height:1.6}}
 .btn{{font-family:inherit;font-size:11.5px;font-weight:700;border-radius:10px;padding:8px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border:none;transition:all .15s;white-space:nowrap}}
 .btn i{{font-size:13px}}
 .btn-p{{background:linear-gradient(135deg,#2F8FFF,#8B5CF6);color:#fff;box-shadow:0 3px 14px rgba(139,92,246,.35)}}
@@ -2037,52 +2030,19 @@ function showQR(label,link){{
   document.getElementById('qr-modal').classList.add('open');
 }}
 
-function openViaScheme(url){{
+function importConfig(link){{
+  // خودِ لینک vless:// رو (بدون هیچ wrapper یا اسکیم اختصاصی اپ خاصی) به‌صورت یک کلیک واقعی
+  // روی <a> باز می‌کنیم. اکثر کلاینت‌های VLESS (v2rayNG، Hiddify، V2Box، Happ، NapsternetV،
+  // Streisand و...) خودشون رو handler اسکیم vless روی سیستم‌عامل ثبت می‌کنن، برای همینه که با
+  // این روش گوشی/آیفون به‌صورت خودکار لیست اپ‌های نصب‌شده‌ی سازگار رو نشون می‌ده و با انتخاب
+  // هرکدوم، همون اپ کانفیگ رو مستقیم ایمپورت می‌کنه (نه صرفاً کپی لینک).
   const a=document.createElement('a');
-  a.href=url;
+  a.href=link;
   a.style.display='none';
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>a.remove(),1000);
 }}
-function importToV2rayNG(link){{
-  // v2rayNG کل لینک vless رو باید یک‌جا و encode‌شده بگیره، وگرنه سر اولین & داخل کوئری‌استرینگ قطعش می‌کنه.
-  closeAppMenus();
-  openViaScheme('v2rayng://install-config/?url='+encodeURIComponent(link));
-  toast('در حال باز شدن v2rayNG…','ok');
-}}
-function importToHiddify(link,name){{
-  closeAppMenus();
-  openViaScheme('hiddify://install-proxy?url='+encodeURIComponent(link)+'#'+encodeURIComponent(name||'X4G'));
-  toast('در حال باز شدن Hiddify…','ok');
-}}
-function copyForManualImport(link){{
-  closeAppMenus();
-  navigator.clipboard.writeText(link).then(()=>toast('لینک کپی شد ✓ — داخل اپ گزینه «Import from Clipboard» رو بزنید','ok'));
-}}
-function closeAppMenus(){{
-  document.querySelectorAll('.app-open-wrap.open').forEach(w=>w.classList.remove('open'));
-}}
-function toggleAppMenu(ev){{
-  ev.stopPropagation();
-  const wrap=ev.currentTarget.closest('.app-open-wrap');
-  const wasOpen=wrap.classList.contains('open');
-  closeAppMenus();
-  if(wasOpen)return;
-  wrap.classList.add('open');
-  const btn=ev.currentTarget;
-  const menu=wrap.querySelector('.app-menu');
-  const r=btn.getBoundingClientRect();
-  const menuH=menu.offsetHeight||150;
-  const spaceBelow=window.innerHeight-r.bottom;
-  const openUp=spaceBelow<menuH+16 && r.top>menuH+16;
-  menu.style.top=openUp?(r.top-menuH-6)+'px':(r.bottom+6)+'px';
-  menu.style.right=(window.innerWidth-r.right)+'px';
-  menu.style.left='auto';
-}}
-document.addEventListener('click',closeAppMenus);
-document.addEventListener('scroll',closeAppMenus,true);
-window.addEventListener('resize',closeAppMenus);
 
 function toggleLink(i){{
   const wrap=document.getElementById('vw-'+i);
@@ -2238,17 +2198,9 @@ function renderContent(d){{
                   onclick="navigator.clipboard.writeText(window._x4gLinks[${{i}}].vless).then(()=>toast('لینک کپی شد ✓','ok'))">
                   <i class="ti ti-copy"></i> کپی لینک
                 </button>
-                <div class="app-open-wrap">
-                  <button class="btn btn-g" onclick="toggleAppMenu(event)">
-                    <i class="ti ti-device-mobile"></i> افزودن به اپ <i class="ti ti-chevron-down" style="font-size:10px"></i>
-                  </button>
-                  <div class="app-menu">
-                    <div class="app-menu-item" onclick="importToV2rayNG(window._x4gLinks[${{i}}].vless)"><i class="ti ti-bolt"></i> v2rayNG</div>
-                    <div class="app-menu-item" onclick="importToHiddify(window._x4gLinks[${{i}}].vless, window._x4gLinks[${{i}}].label)"><i class="ti ti-shield-check"></i> Hiddify</div>
-                    <div class="app-menu-item" onclick="copyForManualImport(window._x4gLinks[${{i}}].vless)"><i class="ti ti-copy"></i> سایر اپ‌ها (کپی برای Import)</div>
-                    <div class="app-menu-hint">اگه اپت تو لیست نیست، همین گزینه‌ی آخر رو بزن و داخل اپ «Import from Clipboard» رو انتخاب کن.</div>
-                  </div>
-                </div>
+                <button class="btn btn-g" onclick="importConfig(window._x4gLinks[${{i}}].vless)">
+                  <i class="ti ti-device-mobile"></i> افزودن مستقیم به اپ
+                </button>
                 <button class="btn btn-g"
                   onclick="showQR(window._x4gLinks[${{i}}].label, window._x4gLinks[${{i}}].vless)">
                   <i class="ti ti-qrcode"></i> QR
