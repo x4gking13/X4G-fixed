@@ -2034,12 +2034,19 @@ function importDirect(link){{
   // لینک vless:// رو مستقیم به سیستم‌عامل می‌ده تا خودش لیست اپ‌های نصب‌شده‌ای
   // که از این نوع لینک پشتیبانی می‌کنن (Happ, V2Box, v2rayNG, Hiddify, Streisand, ...)
   // رو نشون بده و کاربر خودش انتخاب کنه؛ هیچ کپی یا اسم اپی این‌وسط نیست.
-  const a=document.createElement('a');
-  a.href=link;
-  a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(()=>a.remove(),1000);
+  // نکته: باید مستقیم داخل هندلر کلیک واقعی صدا زده بشه (نه از طریق a.click() مصنوعی)
+  // چون خیلی از مرورگرهای موبایل (مخصوصاً سافاری iOS) باز کردن اسکیم‌های سفارشی رو
+  // فقط وقتی به‌عنوان کنش مستقیم کاربر تشخیص بدن مجاز می‌کنن.
+  let appOpened = false;
+  const onBlur = () => {{ appOpened = true; }};
+  window.addEventListener('blur', onBlur, {{once:true}});
+  window.location.href = link;
+  setTimeout(() => {{
+    window.removeEventListener('blur', onBlur);
+    if (!appOpened && !document.hidden) {{
+      toast('هیچ اپی برای باز کردن این لینک پیدا نشد. از دکمه‌ی «کپی لینک» استفاده کن و داخل اپ Import کن','err');
+    }}
+  }}, 1400);
 }}
 
 function toggleLink(i){{
