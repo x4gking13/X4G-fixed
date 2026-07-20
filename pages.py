@@ -2030,12 +2030,10 @@ function showQR(label,link){{
   document.getElementById('qr-modal').classList.add('open');
 }}
 
-function importConfig(link){{
-  // خودِ لینک vless:// رو (بدون هیچ wrapper یا اسکیم اختصاصی اپ خاصی) به‌صورت یک کلیک واقعی
-  // روی <a> باز می‌کنیم. اکثر کلاینت‌های VLESS (v2rayNG، Hiddify، V2Box، Happ، NapsternetV،
-  // Streisand و...) خودشون رو handler اسکیم vless روی سیستم‌عامل ثبت می‌کنن، برای همینه که با
-  // این روش گوشی/آیفون به‌صورت خودکار لیست اپ‌های نصب‌شده‌ی سازگار رو نشون می‌ده و با انتخاب
-  // هرکدوم، همون اپ کانفیگ رو مستقیم ایمپورت می‌کنه (نه صرفاً کپی لینک).
+function importDirect(link){{
+  // لینک vless:// رو مستقیم به سیستم‌عامل می‌ده تا خودش لیست اپ‌های نصب‌شده‌ای
+  // که از این نوع لینک پشتیبانی می‌کنن (Happ, V2Box, v2rayNG, Hiddify, Streisand, ...)
+  // رو نشون بده و کاربر خودش انتخاب کنه؛ هیچ کپی یا اسم اپی این‌وسط نیست.
   const a=document.createElement('a');
   a.href=link;
   a.style.display='none';
@@ -2198,8 +2196,8 @@ function renderContent(d){{
                   onclick="navigator.clipboard.writeText(window._x4gLinks[${{i}}].vless).then(()=>toast('لینک کپی شد ✓','ok'))">
                   <i class="ti ti-copy"></i> کپی لینک
                 </button>
-                <button class="btn btn-g" onclick="importConfig(window._x4gLinks[${{i}}].vless)">
-                  <i class="ti ti-device-mobile"></i> افزودن مستقیم به اپ
+                <button class="btn btn-g" onclick="importDirect(window._x4gLinks[${{i}}].vless)">
+                  <i class="ti ti-device-mobile"></i> افزودن به اپ
                 </button>
                 <button class="btn btn-g"
                   onclick="showQR(window._x4gLinks[${{i}}].label, window._x4gLinks[${{i}}].vless)">
