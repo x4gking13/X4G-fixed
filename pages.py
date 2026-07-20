@@ -693,6 +693,19 @@ a{color:inherit;text-decoration:none}
   .main{padding:62px 12px 50px}
   .sub-grid,.cfg-grid,.conn-grid{grid-template-columns:1fr}
 }
+.cfgdash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.cfgdash-item{background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:13px 14px;cursor:pointer;transition:.15s}
+.cfgdash-item:hover{border-color:var(--card-bh)}
+.cfgdash-item.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cfgdash-item-top{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.cfgdash-item-label{font-size:12.5px;font-weight:700;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cfgdash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.cfgdash-stat{background:var(--accent-d);border:1px solid var(--card-b);border-radius:12px;padding:12px 13px}
+.cfgdash-stat-l{font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.cfgdash-stat-v{font-size:16px;font-weight:800;color:var(--t1)}
+.cfgdash-ip-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;background:var(--accent-d);border:1px solid var(--card-b);margin-bottom:6px;flex-wrap:wrap}
+.cfgdash-ip-row .ip{font-family:ui-monospace,monospace;font-size:12px;color:var(--t1);display:flex;align-items:center;gap:7px}
+.cfgdash-ip-meta{display:flex;align-items:center;gap:12px;font-size:10.5px;color:var(--t3);margin-right:auto;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -769,6 +782,7 @@ a{color:inherit;text-decoration:none}
     <div class="nav-sec">پنل</div>
     <div class="nav-it on" data-pg="overview"><i class="ti ti-layout-dashboard"></i> داشبورد</div>
     <div class="nav-it" data-pg="links"><i class="ti ti-link-plus"></i> کانفیگ‌ها <span class="nav-badge" id="links-nb">0</span></div>
+    <div class="nav-it" data-pg="cfgdash"><i class="ti ti-chart-infographic"></i> داشبورد کانفیگ‌ها</div>
     <div class="nav-it" data-pg="traffic"><i class="ti ti-chart-area"></i> ترافیک</div>
     <div class="nav-it" data-pg="connections"><i class="ti ti-plug-connected"></i> اتصالات <span class="nav-badge" id="conns-nb">0</span></div>
     <div class="nav-sec">سیستم</div>
@@ -999,6 +1013,20 @@ a{color:inherit;text-decoration:none}
   <div class="cfg-grid" id="links-grid"></div>
   <div class="empty" id="links-empty" style="display:none"><i class="ti ti-link-off"></i><p>هنوز کانفیگی وجود ندارد</p></div>
   <div class="empty" id="links-empty-search" style="display:none"><i class="ti ti-search-off"></i><p>موردی با این جستجو پیدا نشد</p></div>
+</section>
+<section class="pg" id="pg-cfgdash">
+  <div class="topbar">
+    <div><div class="tb-title"><i class="ti ti-chart-infographic"></i> داشبورد کانفیگ‌ها</div><div class="tb-sub">آنالیز اختصاصی هر کانفیگ — وضعیت، مصرف و آی‌پی‌های متصل</div></div>
+    <div class="tb-right"><button class="btn btn-p btn-sm" onclick="loadCfgDash()"><i class="ti ti-refresh"></i> رفرش</button></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><i class="ti ti-list"></i> انتخاب کانفیگ <span class="ml-auto badge bg-blue" id="cfgdash-count">۰</span></div>
+    <div class="cfgdash-grid" id="cfgdash-list"></div>
+    <div class="empty" id="cfgdash-empty" style="display:none"><i class="ti ti-link-off"></i><p>هنوز کانفیگی وجود ندارد</p></div>
+  </div>
+  <div id="cfgdash-detail">
+    <div class="card"><div class="empty"><i class="ti ti-hand-click"></i><p>یک کانفیگ را از لیست بالا انتخاب کنید تا آنالیز کامل آن نمایش داده شود</p></div></div>
+  </div>
 </section>
 <section class="pg" id="pg-traffic">
   <div class="topbar">
@@ -1299,7 +1327,7 @@ overlay.addEventListener('click',closeSb);
 function navTo(name){
   document.querySelectorAll('.nav-it').forEach(n=>n.classList.toggle('on',n.dataset.pg===name));
   document.querySelectorAll('.pg').forEach(p=>p.classList.toggle('on',p.id==='pg-'+name));
-  const loaders={links:loadLinks,connections:loadConns,errors:loadErrs,logs:loadActivity};
+  const loaders={links:loadLinks,connections:loadConns,errors:loadErrs,logs:loadActivity,cfgdash:loadCfgDash};
   if(loaders[name])loaders[name]();
   closeSb();window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1675,6 +1703,81 @@ async function loadConns(){
     renderConnsGrid(configs);
   }catch(e){console.error(e)}
 }
+
+// ── داشبورد کانفیگ‌ها: از داده‌ی همون /api/links و /api/connections استفاده می‌کنه ──
+let cfgDashSelected=null;
+async function loadCfgDash(){
+  try{
+    if(!allLinksList.length)await loadLinks();
+    await loadConns();
+    renderCfgDashList();
+    if(cfgDashSelected&&allLinksList.some(l=>l.uuid===cfgDashSelected))renderCfgDashDetail(cfgDashSelected);
+  }catch(e){console.error(e)}
+}
+function renderCfgDashList(){
+  const wrap=document.getElementById('cfgdash-list'),empty=document.getElementById('cfgdash-empty');
+  document.getElementById('cfgdash-count').textContent=toFa(allLinksList.length);
+  if(!allLinksList.length){wrap.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  wrap.innerHTML=allLinksList.map(l=>{
+    const allowed=l.active&&!l.expired;
+    const pct=l.limit_bytes===0?0:Math.min(100,l.used_bytes/l.limit_bytes*100);
+    const bc=pct>90?'var(--red)':pct>70?'var(--amber)':'var(--accent)';
+    return `<div class="cfgdash-item${cfgDashSelected===l.uuid?' on':''}" onclick="selectCfgDash('${l.uuid}')">
+      <div class="cfgdash-item-top"><span class="cfg-status-dot ${allowed?'pulse':''}"></span><span class="cfgdash-item-label">${esc(l.label)}</span>${protoBadge(l.protocol)}</div>
+      <div class="ubar"><div class="ubar-f" style="width:${pct}%;background:${bc}"></div></div>
+      <div class="utxt"><span>${fmtB(l.used_bytes)}</span><span>${l.connected_ips||0} آی‌پی زنده</span></div>
+    </div>`;
+  }).join('');
+}
+function selectCfgDash(uuid){cfgDashSelected=uuid;renderCfgDashList();renderCfgDashDetail(uuid)}
+function renderCfgDashDetail(uuid){
+  const box=document.getElementById('cfgdash-detail');
+  const l=allLinksList.find(x=>x.uuid===uuid);
+  if(!l){box.innerHTML='<div class="card"><div class="empty"><i class="ti ti-mood-empty"></i><p>این کانفیگ دیگر وجود ندارد</p></div></div>';return}
+  const grp=(window.__lastConfigs||[]).find(c=>c.uuid===uuid);
+  const ips=grp?grp.connections||[]:[];
+  const pct=l.limit_bytes===0?0:Math.min(100,l.used_bytes/l.limit_bytes*100);
+  const bc=pct>90?'var(--red)':pct>70?'var(--amber)':'var(--accent)';
+  const speedTxt=l.speed_limit_bytes?((l.speed_limit_bytes*8/1024/1024).toFixed(1)+' Mbps'):'نامحدود';
+  box.innerHTML=`
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title"><i class="ti ti-key"></i> ${esc(l.label)} ${l.active&&!l.expired?'<span class="badge bg-green" style="margin-right:6px">فعال</span>':'<span class="badge bg-red" style="margin-right:6px">'+(l.expired?'منقضی':'غیرفعال')+'</span>'}
+        <span class="ml-auto" style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-g btn-icon" onclick="navigator.clipboard.writeText('${esc(l.vless_link)}').then(()=>toast('لینک کپی شد','ok'))" title="کپی لینک"><i class="ti ti-copy"></i></button>
+          <button class="btn btn-sm btn-g btn-icon" onclick="showQR('${esc(l.vless_link)}')" title="QR"><i class="ti ti-qrcode"></i></button>
+          <button class="btn btn-sm btn-g btn-icon" onclick="openLinkChart('${l.uuid}','${esc(l.label)}')" title="نمودار مصرف"><i class="ti ti-chart-line"></i></button>
+        </span>
+      </div>
+      <div class="cfgdash-stats">
+        <div class="cfgdash-stat"><div class="cfgdash-stat-l">مصرف / سقف</div><div class="cfgdash-stat-v">${fmtB(l.used_bytes)}</div><div class="utxt" style="margin-top:6px"><span></span><span>از ${l.limit_bytes===0?'∞':fmtB(l.limit_bytes)}</span></div><div class="ubar" style="margin-top:6px"><div class="ubar-f" style="width:${pct}%;background:${bc}"></div></div></div>
+        <div class="cfgdash-stat"><div class="cfgdash-stat-l">محدودیت سرعت</div><div class="cfgdash-stat-v" style="font-size:14px">${speedTxt}</div></div>
+        <div class="cfgdash-stat"><div class="cfgdash-stat-l">آی‌پی زنده / محدودیت</div><div class="cfgdash-stat-v">${toFa(l.connected_ips||0)}${l.ip_limit?(' / '+toFa(l.ip_limit)):' (∞)'}</div></div>
+        <div class="cfgdash-stat"><div class="cfgdash-stat-l">انقضا</div><div class="cfgdash-stat-v" style="font-size:14px">${expChip(l.expires_at,l.expired)}</div></div>
+      </div>
+      <div class="sr"><span class="sr-k"><i class="ti ti-route"></i> پروتکل</span><span class="sr-v">${protoBadge(l.protocol)}</span></div>
+      <div class="sr"><span class="sr-k"><i class="ti ti-plug"></i> پورت</span><span class="sr-v">${toFa(l.port||443)}</span></div>
+      <div class="sr"><span class="sr-k"><i class="ti ti-fingerprint"></i> Fingerprint</span><span class="sr-v">${esc(l.fingerprint||'chrome')}</span></div>
+      <div class="sr"><span class="sr-k"><i class="ti ti-calendar"></i> تاریخ ساخت</span><span class="sr-v">${new Date(l.created_at).toLocaleDateString('fa-IR')}</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-map-pin"></i> آی‌پی‌های متصل هم‌اکنون <span class="ml-auto badge bg-blue">${toFa(ips.length)}</span></div>
+      ${ips.length?ips.map(c=>{
+        const secs=c.connected_at?Math.max(0,Math.floor((Date.now()-new Date(c.connected_at).getTime())/1000)):0;
+        const dur=secs<60?secs+' ثانیه':secs<3600?Math.floor(secs/60)+' دقیقه':Math.floor(secs/3600)+' ساعت';
+        return `<div class="cfgdash-ip-row">
+          <span class="ip"><span class="dot dg pulse" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span> ${esc(c.ip)}</span>
+          <div class="cfgdash-ip-meta">
+            <span><i class="ti ti-repeat"></i> ${toFa(c.sessions)} سشن</span>
+            <span><i class="ti ti-transfer"></i> ${esc(c.bytes_fmt)}</span>
+            <span><i class="ti ti-clock"></i> ${dur}</span>
+          </div>
+        </div>`;
+      }).join(''):'<div class="empty"><i class="ti ti-plug-off"></i><p>در حال حاضر آی‌پی متصلی به این کانفیگ نیست</p></div>'}
+    </div>
+  `;
+}
+
 async function loadErrs(){try{const r=await authF('/stats'),d=await r.json();renderErrs(d.recent_errors||[]);}catch(e){}}
 function cpText(id){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>toast('کپی شد ✓','ok'))}
 function qrFor(id){showQR(document.getElementById(id).textContent)}
@@ -1806,6 +1909,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(document.getElementById('pg-links').classList.contains('on'))loadLinks();
     if(document.getElementById('pg-connections').classList.contains('on'))loadConns();
     if(document.getElementById('pg-logs').classList.contains('on'))loadActivity();
+    if(document.getElementById('pg-cfgdash').classList.contains('on'))loadCfgDash();
   },5000);
 });
 </script>
