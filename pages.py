@@ -915,11 +915,7 @@ a{color:inherit;text-decoration:none}
           </div>
         </div>
       </div>
-      <div class="cp-row mb16">
-        <div class="cp-block">
-          <div class="cp-block-label"><i class="ti ti-route"></i> پورت اتصال</div>
-          <input class="cp-input-full" id="nl-port" type="number" min="1" max="65535" placeholder="443" value="443">
-        </div>
+      <div class="cp-row mb16" style="grid-template-columns:1fr">
         <div class="cp-block">
           <div class="cp-block-label"><i class="ti ti-users"></i> محدودیت آی‌پی / کاربر هم‌زمان</div>
           <input class="cp-input-full" id="nl-iplimit" type="number" min="0" step="1" placeholder="0 = نامحدود" value="0">
@@ -1387,7 +1383,7 @@ async function createLink(){
   const protocol=document.getElementById('nl-proto').value||'vless-ws';
   const fingerprint=document.getElementById('nl-fp').value||'chrome';
   const alpn=document.getElementById('nl-alpn').value.trim();
-  const port=Number(document.getElementById('nl-port').value)||443;
+  const port=443;
   const ip_limit=Number(document.getElementById('nl-iplimit').value)||0;
   const speed_limit_value=Number(document.getElementById('nl-speed').value)||0;
   const speed_limit_unit=document.getElementById('nl-speed-unit').value;
@@ -1395,7 +1391,6 @@ async function createLink(){
     const r=await authF('/api/links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,limit_value:val||0,limit_unit:unit,expires_days:exp||0,note,protocol,fingerprint,alpn,port,ip_limit,speed_limit_value,speed_limit_unit})});
     if(!r.ok)throw new Error('failed');
     ['nl-label','nl-val','nl-exp','nl-note','nl-alpn'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('nl-port').value='443';
     document.getElementById('nl-iplimit').value='0';
     document.getElementById('nl-speed').value='0';
     document.getElementById('nl-alpn-preset').value='';
