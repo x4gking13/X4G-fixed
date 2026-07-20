@@ -2031,26 +2031,26 @@ function showQR(label,link){{
 }}
 
 function importDirect(link){{
-  // اول لینک vless:// رو مستقیم به سیستم‌عامل می‌ده، چون بعضی اپ‌ها (مخصوصاً روی
-  // اندروید، مثل NekoBox/sing-box) خودشون رو برای این اسکیم رجیستر می‌کنن و مستقیم باز می‌شن.
+  // v2rayNG اسکیم اختصاصی خودش رو داره که کانفیگ رو خودکار داخلش اضافه می‌کنه
+  // (نه فقط باز کردن اپ خالی): v2rayng://install-config/?url=...
+  // این با خود لینک vless:// خام فرق داره؛ اکثر اپ‌ها (Happ, V2Box, ...) اصلاً برای
+  // vless:// خام رجیستر نمی‌شن، هرکدوم اسکیم اختصاصی خودشون رو دارن.
   // نکته: باید مستقیم داخل هندلر کلیک واقعی صدا زده بشه (نه از طریق a.click() مصنوعی)
   // چون خیلی از مرورگرهای موبایل (مخصوصاً سافاری iOS) باز کردن اسکیم‌های سفارشی رو
   // فقط وقتی به‌عنوان کنش مستقیم کاربر تشخیص بدن مجاز می‌کنن.
-  // اما اکثر اپ‌های محبوب (Happ, V2Box, v2rayNG, ...) اصلاً برای vless:// خام رجیستر
-  // نمی‌شن (هرکدوم اسکیم اختصاصی خودشون رو دارن)، پس اگه چیزی باز نشد، به‌جای اینکه
-  // کاربر رو با یه ارور تنها بذاریم، خودمون لینک رو کپی می‌کنیم — دقیقاً همون روشی که
-  // خود این اپ‌ها هم برای Import from Clipboard توصیه می‌کنن.
+  const v2rayngUrl = 'v2rayng://install-config/?url=' + encodeURIComponent(link);
   let appOpened = false;
   const onBlur = () => {{ appOpened = true; }};
   window.addEventListener('blur', onBlur, {{once:true}});
-  window.location.href = link;
+  window.location.href = v2rayngUrl;
   setTimeout(() => {{
     window.removeEventListener('blur', onBlur);
     if (!appOpened && !document.hidden) {{
+      // v2rayNG نصب نیست یا این اسکیم رو نشناخت -> کپی به‌عنوان جایگزین برای هر اپ دیگه‌ای
       navigator.clipboard.writeText(link).then(() => {{
-        toast('اپی که مستقیم این لینک رو باز کنه پیدا نشد؛ لینک کانفیگ کپی شد ✓ — داخل اپت «Import from Clipboard» رو بزن','ok');
+        toast('v2rayNG روی این گوشی پیدا نشد؛ لینک کانفیگ کپی شد ✓ — داخل هر اپی که داری «Import from Clipboard» رو بزن','ok');
       }}).catch(() => {{
-        toast('اپی برای باز کردن این لینک پیدا نشد. از دکمه‌ی «کپی لینک» استفاده کن','err');
+        toast('مشکلی پیش اومد. از دکمه‌ی «کپی لینک» استفاده کن','err');
       }});
     }}
   }}, 1400);
@@ -2211,7 +2211,7 @@ function renderContent(d){{
                   <i class="ti ti-copy"></i> کپی لینک
                 </button>
                 <button class="btn btn-g" onclick="importDirect(window._x4gLinks[${{i}}].vless)">
-                  <i class="ti ti-device-mobile"></i> افزودن به اپ
+                  <i class="ti ti-device-mobile"></i> افزودن به v2rayNG
                 </button>
                 <button class="btn btn-g"
                   onclick="showQR(window._x4gLinks[${{i}}].label, window._x4gLinks[${{i}}].vless)">
