@@ -973,6 +973,14 @@ a{color:inherit;text-decoration:none}
       <i class="ti ti-search"></i>
       <input id="links-search" placeholder="جستجو بر اساس نام، یادداشت یا UUID..." oninput="renderLinksGrid()">
     </div>
+    <select id="links-sort" class="fs" style="min-width:180px" onchange="renderLinksGrid()">
+      <option value="newest">مرتب‌سازی: جدیدترین</option>
+      <option value="name">نام (الفبا)</option>
+      <option value="usage_desc">بیشترین مصرف</option>
+      <option value="usage_asc">کمترین مصرف</option>
+      <option value="remaining_asc">کمترین حجم باقی‌مانده</option>
+      <option value="active_first">فعال‌ها اول</option>
+    </select>
     <label class="bulk-selall">
       <input type="checkbox" id="links-selall" onchange="toggleSelectAllLinks(this)">
       <span>انتخاب همه</span>
@@ -1369,12 +1377,28 @@ async function loadLinks(){
 }
 function filteredLinksList(){
   const q=(document.getElementById('links-search')?.value||'').trim().toLowerCase();
-  if(!q)return allLinksList;
-  return allLinksList.filter(l=>
+  let list=!q?allLinksList:allLinksList.filter(l=>
     (l.label||'').toLowerCase().includes(q) ||
     (l.note||'').toLowerCase().includes(q) ||
     (l.uuid||'').toLowerCase().includes(q)
   );
+  const sortBy=document.getElementById('links-sort')?.value||'newest';
+  const remaining=l=>l.limit_bytes===0?Infinity:Math.max(0,l.limit_bytes-l.used_bytes);
+  list=list.slice();
+  if(sortBy==='name'){
+    list.sort((a,b)=>(a.label||'').localeCompare(b.label||'','fa'));
+  }else if(sortBy==='usage_desc'){
+    list.sort((a,b)=>(b.used_bytes||0)-(a.used_bytes||0));
+  }else if(sortBy==='usage_asc'){
+    list.sort((a,b)=>(a.used_bytes||0)-(b.used_bytes||0));
+  }else if(sortBy==='remaining_asc'){
+    list.sort((a,b)=>remaining(a)-remaining(b));
+  }else if(sortBy==='active_first'){
+    list.sort((a,b)=>((b.active&&!b.expired)?1:0)-((a.active&&!a.expired)?1:0));
+  }else{
+    list.sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  }
+  return list;
 }
 function renderLinksGrid(){
   const links=filteredLinksList();
@@ -2030,32 +2054,6 @@ function showQR(label,link){{
   document.getElementById('qr-modal').classList.add('open');
 }}
 
-function importDirect(link){{
-  // v2rayNG اسکیم اختصاصی خودش رو داره که کانفیگ رو خودکار داخلش اضافه می‌کنه
-  // (نه فقط باز کردن اپ خالی): v2rayng://install-config/?url=...
-  // این با خود لینک vless:// خام فرق داره؛ اکثر اپ‌ها (Happ, V2Box, ...) اصلاً برای
-  // vless:// خام رجیستر نمی‌شن، هرکدوم اسکیم اختصاصی خودشون رو دارن.
-  // نکته: باید مستقیم داخل هندلر کلیک واقعی صدا زده بشه (نه از طریق a.click() مصنوعی)
-  // چون خیلی از مرورگرهای موبایل (مخصوصاً سافاری iOS) باز کردن اسکیم‌های سفارشی رو
-  // فقط وقتی به‌عنوان کنش مستقیم کاربر تشخیص بدن مجاز می‌کنن.
-  const v2rayngUrl = 'v2rayng://install-config/?url=' + encodeURIComponent(link);
-  let appOpened = false;
-  const onBlur = () => {{ appOpened = true; }};
-  window.addEventListener('blur', onBlur, {{once:true}});
-  window.location.href = v2rayngUrl;
-  setTimeout(() => {{
-    window.removeEventListener('blur', onBlur);
-    if (!appOpened && !document.hidden) {{
-      // v2rayNG نصب نیست یا این اسکیم رو نشناخت -> کپی به‌عنوان جایگزین برای هر اپ دیگه‌ای
-      navigator.clipboard.writeText(link).then(() => {{
-        toast('v2rayNG روی این گوشی پیدا نشد؛ لینک کانفیگ کپی شد ✓ — داخل هر اپی که داری «Import from Clipboard» رو بزن','ok');
-      }}).catch(() => {{
-        toast('مشکلی پیش اومد. از دکمه‌ی «کپی لینک» استفاده کن','err');
-      }});
-    }}
-  }}, 1400);
-}}
-
 function toggleLink(i){{
   const wrap=document.getElementById('vw-'+i);
   const btn=document.getElementById('vt-'+i);
@@ -2209,9 +2207,6 @@ function renderContent(d){{
                 <button class="btn btn-p"
                   onclick="navigator.clipboard.writeText(window._x4gLinks[${{i}}].vless).then(()=>toast('لینک کپی شد ✓','ok'))">
                   <i class="ti ti-copy"></i> کپی لینک
-                </button>
-                <button class="btn btn-g" onclick="importDirect(window._x4gLinks[${{i}}].vless)">
-                  <i class="ti ti-device-mobile"></i> افزودن به v2rayNG
                 </button>
                 <button class="btn btn-g"
                   onclick="showQR(window._x4gLinks[${{i}}].label, window._x4gLinks[${{i}}].vless)">
