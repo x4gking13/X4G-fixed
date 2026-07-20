@@ -1910,7 +1910,7 @@ html,body{{min-height:100%;background:var(--bg);font-family:var(--serif);color:v
 [data-theme="light"] .cfg-vless{{background:rgba(46,99,214,.05)}}
 .cfg-actions{{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}}
 .app-open-wrap{{position:relative;display:inline-flex}}
-.app-menu{{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:210px;background:var(--card);border:1px solid var(--card-b);border-radius:13px;box-shadow:var(--shadow);padding:6px;z-index:50}}
+.app-menu{{display:none;position:fixed;min-width:210px;background:var(--card);border:1px solid var(--card-b);border-radius:13px;box-shadow:var(--shadow);padding:6px;z-index:9999}}
 .app-open-wrap.open .app-menu{{display:block}}
 .app-menu-item{{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;font-size:12px;font-weight:600;color:var(--t1);cursor:pointer;transition:.12s}}
 .app-menu-item:hover{{background:var(--accent-d);color:var(--accent2)}}
@@ -2060,15 +2060,29 @@ function copyForManualImport(link){{
   closeAppMenus();
   navigator.clipboard.writeText(link).then(()=>toast('لینک کپی شد ✓ — داخل اپ گزینه «Import from Clipboard» رو بزنید','ok'));
 }}
-function closeAppMenus(){{document.querySelectorAll('.app-open-wrap.open').forEach(w=>w.classList.remove('open'))}}
+function closeAppMenus(){{
+  document.querySelectorAll('.app-open-wrap.open').forEach(w=>w.classList.remove('open'));
+}}
 function toggleAppMenu(ev){{
   ev.stopPropagation();
   const wrap=ev.currentTarget.closest('.app-open-wrap');
   const wasOpen=wrap.classList.contains('open');
   closeAppMenus();
-  if(!wasOpen)wrap.classList.add('open');
+  if(wasOpen)return;
+  wrap.classList.add('open');
+  const btn=ev.currentTarget;
+  const menu=wrap.querySelector('.app-menu');
+  const r=btn.getBoundingClientRect();
+  const menuH=menu.offsetHeight||150;
+  const spaceBelow=window.innerHeight-r.bottom;
+  const openUp=spaceBelow<menuH+16 && r.top>menuH+16;
+  menu.style.top=openUp?(r.top-menuH-6)+'px':(r.bottom+6)+'px';
+  menu.style.right=(window.innerWidth-r.right)+'px';
+  menu.style.left='auto';
 }}
 document.addEventListener('click',closeAppMenus);
+document.addEventListener('scroll',closeAppMenus,true);
+window.addEventListener('resize',closeAppMenus);
 
 function toggleLink(i){{
   const wrap=document.getElementById('vw-'+i);
